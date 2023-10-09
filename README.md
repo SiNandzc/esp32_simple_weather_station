@@ -1,2 +1,2 @@
 # esp32_simple_weather_station
-由esp32开发的温湿度记录检测项目
+由esp32micropython开发的简易气象站
