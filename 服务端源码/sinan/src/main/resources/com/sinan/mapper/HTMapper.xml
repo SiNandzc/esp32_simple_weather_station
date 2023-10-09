@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--mybatis映射文件-->
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sinan.mapper.HTMapper">
+    <select id="getByParam" resultType="Record">
+        select * from h_t_table
+        <where>
+            <if test="year!=null">
+                YEAR(dateTime)=#{year}
+            </if>
+            <if test="month!=null">
+                and MONTH(dateTime)=#{month}
+            </if>
+            <if test="day!=null">
+                and DAY(dateTime)=#{day}
+            </if>
+        </where>
+        order by dateTime
+    </select>
+</mapper>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>platform</title>
+  <style>
+    body{
+      background-color: rgb(48, 149, 237);
+    }
+    #app{
+      margin: 80px auto ;
+      border: 3px rgb(23, 229, 30) solid;
+      background-color: rgb(193, 40, 248);
+      border-radius: 12px;
+      width: 400px;
+      height: 400px;
+    }
+    #title{
+      border: 1px rgb(250, 249, 249) solid;
+      border-radius: 12px;
+      background-color: aqua;
+    }
+    form{
+      margin-top: 50px;
+    }
+    .input{
+      width: 50px;
+    }
+    span{
+      border: 1px rgb(25, 28, 30) solid;
+      border-radius: 5px;
+      background-color: aqua;
+      margin-left: 20px;
+    }
+    .b{
+      border-radius: 5px;
+      background-color: green;
+    }
+    h1{
+      text-align: center;
+    }
+    .op{
+      margin-left: 55px;
+    }
+    #h_max{
+      margin-left: 27px;
+    }
+    div{
+      margin-top: 20px;
+    }
+    #submit{
+      text-align: center;
+    }
+    #s_b{
+      background-color: rgb(2, 183, 243);
+      width: 70px;
+      height: 45px;
+      border-radius: 5px;
+    }
+    table{
+      background-color: black;
+      width:300px;
+      text-align: center;
+    }
+    font{
+      color: aliceblue;
+    }
+  </style>
+</head>
+<body>
+<iframe  width=0 height=0 frameborder=0 id="myiframe" name="myiframe"></iframe>
+<div id="app">
+  <div>
+    <h1>
+      <span id="title">Control_Platform</span>
+    </h1>
+    <hr>
+  </div>
+  <div class="op">
+    <table>
+      <tr>
+        <td><font id="temper">temperature:???°C</font></td>
+        <td><font id="humid">humidity:???%</font></td>
+      </tr>
+    </table>
+  </div>
+  <div>
+    <form action="/update"  method="get" target="myiframe">
+      <div id="leds" class="op">
+        <label>
+          <span>leds</span>
+          <input class="b" name="led" value="0" type="checkbox">
+          <input class="b" name="led" value="1" type="checkbox">
+          <input class="b" name="led" value="2" type="checkbox">
+          <input class="b" name="led" value="3" type="checkbox">
+          <input class="b" name="led" value="4" type="checkbox">
+          <input class="b" name="led" value="5" type="checkbox">
+          <input class="b" name="led" value="6" type="checkbox">
+          <input class="b" name="led" value="7" type="checkbox">
+        </label>
+      </div>
+      <div id="t"  class="op">
+        <label>
+          <span>temperature_limit</span>
+          <input type="number" class="input" id="t_max" name="t_max" placeholder="max">
+          <input type="number" class="input" id="t_min" name="t_min" placeholder="min">
+        </label>
+      </div>
+      <div id="h"  class="op">
+        <label>
+          <span>humidity_limit</span>
+          <input type="number" class="input" id="h_max" name="h_max" placeholder="max">
+          <input type="number" class="input" id="h_min" name="h_min" placeholder="min">
+        </label>
+      </div>
+      <div id="submit">
+        <input id="s_b" type="submit" value="confirm">
+      </div>
+    </form>
+  </div>
+</div>
+</body>
+<script>
+    const temperature=document.getElementById("temper")
+    const humidity=document.getElementById("humid")
+    function fetchData() {
+        var xhr = new XMLHttpRequest();
+        
+        xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            // 处理成功响应的数据
+            var responseData = JSON.parse(xhr.responseText);
+            temperature.innerHTML="temperature:"+responseData.temperature+"°C"
+            humidity.innerHTML="humidity:"+responseData.humidity+"%"
+        }
+        };
+        xhr.open('GET', window.location+'/get_th'); // 替换成您的API URL
+        xhr.send();
+    }
+      // 设置循环定时器，每隔一段时间执行一次请求
+      setInterval(fetchData, 1000); // 5000毫秒（5秒）为示例的间隔时间，根据需求调整
+</script>
+</html>

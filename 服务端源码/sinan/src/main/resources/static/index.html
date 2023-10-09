@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>我的气象站</title>
+  <script src="js/vue.js"></script>
+  <script src="js/axios.js"></script>
+  <link rel="stylesheet" href="js/element-ui/lib/theme-chalk/index.css">
+  <script src="js/element-ui/lib/index.js"></script>
+  <script src="js/anychart-base.min.js"></script>
+  <style>
+    html,body{
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #app{
+      height: 100%;
+    }
+    #container_1{
+      width: 60%;
+      height: 100%;
+      margin-top: 30px;
+      padding: 0;
+      float: left;
+    }
+    #container_2{
+      width: 100%;
+      height: 80%;
+      margin-top: 30px;
+      padding: 0;
+    }
+    .el-header{
+      padding: 0;
+    }
+    .el-main {
+      background-color: #77a8f1;
+      color: #333;
+      text-align: center;
+      line-height: 100%;
+    }
+    .el-container {
+      height: 100%;
+    }
+    .information{
+      background-color: #4ac9f3;
+    }
+    #show_data{
+      width: 100%;
+      height: 90%;
+    }
+    .imfor{
+      margin: auto 20px;
+    }
+    #Tc{
+      width:50%;
+      height: 100%;
+      float: left;
+    }
+    #Hc{
+      width: 49%;
+      height: 100%;
+      float: right;
+    }
+    #today_data{
+      height: 100%;
+    }
+    #history_data{
+      width: 100%;
+      height: 100%;
+    }
+    #time_data{
+      width: 40%;
+      height: 100%;
+      float: right;
+      margin: 0;
+      /*padding-top: 20px;*/
+    }
+    .el-tabs{
+      background-color: #fffc0a;
+    }
+    #connected{
+      color: #005a27;
+      border-radius: 5px;
+      background-color: white;
+    }
+    #unconnected{
+      color: #ff0006;
+      border-radius: 5px;
+      background-color: white;
+    }
+    .el-progress{
+      margin-top: 60%;
+    }
+    .block{
+      border: red solid 1px;
+    }
+    #time_chose{
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+<!--html-->
+<div id="app">
+  <el-container >
+    <el-header>
+      <el-tabs v-model="activeName" type="card" @tab-click="handleClick">
+        <el-tab-pane label="当前记录" name="first">当前记录</el-tab-pane>
+        <el-tab-pane label="历史记录" name="second">历史记录</el-tab-pane>
+      </el-tabs>
+    </el-header>
+    <el-main>
+      <div id="today_data" v-show="activeName==='first'">
+        <div class="information">
+          <span class="imfor" style="color: red">最高温度{{maxTemperature}}°C</span>
+          <span class="imfor" style="color: blue">最低温度{{minTemperature}}°C</span>
+          <span class="imfor" style="color: red">最高湿度{{maxHumidity}}%</span>
+          <span class="imfor" style="color: blue">最低湿度{{minHumidity}}%</span>
+          <span class="imfor" style="color: #095c00">平均温度{{avgTemperature}}°C</span>
+          <span class="imfor" style="color: #095c00">平均湿度{{avgHumidity}}%</span>
+          <span v-if="connected===true" id="connected" class="imfor"><i class="el-icon-link"></i>传感器已连接</span>
+          <span  v-if="connected===false" id="unconnected" class="imfor" ><i class="el-icon-loading"> </i>传感器未连接</span>
+        </div>
+        <div id="show_data">
+          <div id="container_1"  v-loading="loading"></div>
+          <div id="time_data">
+            <div id="Tc">
+              <el-progress  type="circle" :percentage="nowT" :color="colors_T" :format="temper" :width="250"></el-progress>
+            </div>
+            <div  id="Hc">
+              <el-progress type="circle" :percentage="nowH" :color="colors_H" :format="humid" :width="250"></el-progress>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="history_data" v-show="activeName==='second'">
+        <div class="information">
+          <span class="imfor" style="color: red">最高温度{{maxTemperature}}°C</span>
+          <span class="imfor" style="color: blue">最低温度{{minTemperature}}°C</span>
+          <span class="imfor" style="color: red">最高湿度{{maxHumidity}}%</span>
+          <span class="imfor" style="color: blue">最低湿度{{minHumidity}}%</span>
+          <span class="imfor" style="color: #095c00">平均温度{{avgTemperature}}°C</span>
+          <span class="imfor" style="color: #095c00">平均湿度{{avgHumidity}}%</span>
+        </div>
+        <div id="container_2"  v-loading="loading2" ></div>
+        <el-row id="time_chose">
+          <el-date-picker
+              v-model="choseDate"
+              align="right"
+              type="date"
+              placeholder="选择日期"
+              :picker-options="pickerOptions">
+          </el-date-picker>
+          <el-button type="primary" v-on:click="queryToYear">查询至年</el-button>
+          <el-button type="primary" v-on:click="queryToMonth">查询至月</el-button>
+          <el-button type="primary" v-on:click="queryToDay">查询至日</el-button>
+        </el-row>
+      </div>
+    </el-main>
+  </el-container>
+</div>
+
+
+<!--script-->
+<script>
+  vue=new Vue({
+    el:"#app",
+    data() {
+      return {
+        data:[["????-??-??",0,0]],
+        connected:'',
+        loading:true,
+        loading2:false,
+        activeName: 'first',
+        date:'',
+        maxTemperature:"??",
+        minTemperature:"??",
+        maxHumidity:"??",
+        minHumidity:"??",
+        avgTemperature:"??",
+        avgHumidity:"??",
+        nowT:0,
+        nowH:0,
+        colors_T: [
+          {color: '#0086fc', percentage: 10},
+          {color: '#0aeee6', percentage: 18},
+          {color: '#32fc07', percentage: 26},
+          {color: '#f15e64', percentage: 35},
+          {color: '#f60101', percentage: 40}
+        ],
+        colors_H: [
+          {color: '#0086fc', percentage: 30},
+          {color: '#0aeee6', percentage: 45},
+          {color: '#32fc07', percentage: 55},
+          {color: '#f15e64', percentage: 70},
+          {color: '#f60101', percentage: 80}
+        ],
+        chart:'',
+        firstLine:'',
+        secondLine:'',
+        pickerOptions: {
+          disabledDate(time) {
+            return time.getTime() > Date.now();
+          },
+          shortcuts: [{
+            text: '今天',
+            onClick(picker) {
+              picker.$emit('pick', new Date());
+            }
+          }, {
+            text: '昨天',
+            onClick(picker) {
+              const date = new Date();
+              date.setTime(date.getTime() - 3600 * 1000 * 24);
+              picker.$emit('pick', date);
+            }
+          }, {
+            text: '一周前',
+            onClick(picker) {
+              const date = new Date();
+              date.setTime(date.getTime() - 3600 * 1000 * 24 * 7);
+              picker.$emit('pick', date);
+            }
+          }]
+        },
+        choseDate:null
+      };
+    },
+
+    mounted(){
+      const this_=this;
+      this.initLine();
+      setInterval(function (){
+        if (this_.activeName==='first'){
+          let theDate=new Date;
+          let year=theDate.getFullYear();
+          let month=theDate.getMonth()+1;
+          if (month<10){
+            month='0'+month;
+          }
+          let day=theDate.getDate();
+          if (day<10){
+            day='0'+day;
+          }
+          this_.date=year+"-"+month+"-"+day;
+          axios.get("/getByDate"+"?date="+this_.date).then(function (resp) {
+            // 添加数据
+            let data = resp.data.data;
+            if (data.length===0){
+              data=[["????-??-??",0,0]]
+            }
+            this_.data=data;
+            this_.loading=false;
+            this_.checkData(data);
+          })
+        }
+      },15000);
+
+      setInterval(function () {
+        if (this_.activeName==='first'){
+          axios.get("/getNew").then(function (resp) {
+            this_.nowT = resp.data.data[0][2];
+            this_.nowH = resp.data.data[0][1];
+            let theDate = new Date;
+            let get_time = resp.data.data[0][0];
+            get_time = get_time.split(':');
+            this_.connected = false;
+            if (parseInt(get_time[0]) === theDate.getHours()) {
+              if (parseInt(get_time[1]) === theDate.getMinutes()) {
+                if (Math.abs(parseInt(get_time[2]) - theDate.getSeconds()) < 10) {
+                  this_.connected = true;
+                }
+              }
+            }
+          })
+        }
+      },5000)
+    },
+
+    methods:{
+      initLine(){
+        // 创建数据集
+        let data=[["0000-00-00",0,0]]
+        let dataSet = anychart.data.set(data);
+        // 映射所有数据到系列
+        let firstSeriesData =dataSet.mapAs({x: 0, value: 1});
+        let secondSeriesData =dataSet.mapAs({x: 0, value: 2});
+        // 创建折线图
+        this.chart = anychart.line();
+        // 创建系列及命名
+        this.firstLine =this. chart.line(firstSeriesData);
+        this.firstLine.name("humidity");
+        this.secondLine =this.chart.line(secondSeriesData);
+        this.secondLine.name("temperature");
+        this.secondLine.color("red")
+        this. chart.yAxis().title("value");
+        this. chart.xAxis().title("Time");
+        this. chart.crosshair().enabled(true).yStroke(null).yLabel(false);
+        this. chart.tooltip().positionMode("point");
+        this. chart.tooltip().position("right").anchor("left-center").offsetX(5).offsetY(5);
+        // 添加图标
+        this. chart.legend().enabled(true);
+        // 添加标题
+        this. chart.title("MWS Record");
+        // 设置在哪里展现折线图
+        this.chart.container("container_1");
+        // 绘制折线图
+        this.chart.draw();
+      },
+
+      checkData(data){
+        const this_=this
+        let maxT=data[0][2];
+        let minT=data[0][2];
+        let maxH=data[0][1];
+        let minH=data[0][1];
+        let sumT=0;
+        let sumH=0;
+        for (const i in data) {
+          if (data[i][2]>maxT){
+            maxT=data[i][2];
+          }
+          if (data[i][2]<minT){
+            minT=data[i][2];
+          }
+          if (data[i][1]>maxH){
+            maxH=data[i][1];
+          }
+          if (data[i][1]<minH){
+            minH=data[i][1];
+          }
+          sumT=sumT+data[i][2];
+          sumH=sumH+data[i][1];
+        }
+        this_.maxTemperature=maxT;
+        this_.maxHumidity=maxH;
+        this_.minTemperature=minT;
+        this_.minHumidity=minH;
+        this_.avgTemperature=(sumT/data.length).toFixed(2);;
+        this_.avgHumidity=(sumH/data.length).toFixed(2);;
+        let dataSet = anychart.data.set(data);
+        // 映射新数据到系列
+        let newFirstSeriesData =dataSet.mapAs({ x: 0, value: 1 });
+        let newSecondSeriesData =dataSet.mapAs({ x: 0, value: 2 });
+        // 更新系列的数据
+        this_.firstLine.data(newFirstSeriesData);
+        this_.secondLine.data(newSecondSeriesData);
+        // 重新绘制图表
+        this_.chart.draw();
+      },
+
+      temper(percentage){
+        if(this.connected===true){
+          return `当前温度${percentage}°C`;
+        }else {
+          return `最新温度${percentage}°C`;
+        }
+      },
+
+      humid(percentage){
+        if(this.connected===true){
+          return `当前湿度${percentage}%`;
+        }else {
+          return `最新湿度${percentage}%`;
+        }
+      },
+
+      handleClick(tab, event) {
+        if (tab.name==='first'){
+          this.checkData(this.data);
+          this.chart.container("container_1");
+          this.chart.draw();
+        }else if (tab.name==='second'){
+          this.checkData([["????-??-??",0,0]]);
+          this.chart.container("container_2");
+          this.chart.draw();
+        }
+      },
+
+      queryToYear(){
+        if (this.choseDate===null){
+          this.withoutValue()
+          return;
+        }
+        this.loading2=true;
+        let this_=this
+        let msg={
+          year:this.choseDate.getFullYear()
+        }
+        axios.post('/getByParams',msg).then(function (resp){
+          let data=resp.data.data;
+          if (data.length>0){
+            this_.success();
+          }else {
+            this_.fail();
+            return;
+          }
+          this_.checkData(data);
+        })
+      },
+
+      queryToMonth(){
+        if (this.choseDate===null){
+          this.withoutValue()
+          return;
+        }
+        let this_=this
+        this.loading2=true;
+        let msg={
+          year:this.choseDate.getFullYear(),
+          month:this.choseDate.getMonth()+1
+        }
+        axios.post('/getByParams',msg).then(function (resp){
+          let data=resp.data.data;
+          if (data.length>0){
+            this_.success();
+          }else {
+            this_.fail();
+            return;
+          }
+          this_.checkData(data);
+        })
+      },
+
+      queryToDay(){
+
+        if (this.choseDate===null){
+          this.withoutValue()
+          return;
+        }
+        let this_=this
+        this.loading2=true;
+        let msg={
+          year:this.choseDate.getFullYear(),
+          month:this.choseDate.getMonth()+1,
+          day:this.choseDate.getDate()
+        }
+        axios.post('/getByParams',msg).then(function (resp){
+          let data=resp.data.data;
+          if (data.length>0){
+            this_.success();
+          }else {
+            this_.fail();
+            return;
+          }
+          this_.checkData(data);
+        })
+      },
+
+      success() {
+        this.loading2=false;
+        this.$message({
+          message: '查询成功！！！',
+          type: 'success'
+        });
+      },
+
+      fail() {
+        this.loading2=false;
+        this.$message.error('未查询到记录！！！');
+      },
+
+      withoutValue(){
+        this.$message.error('未选择日期，请填写日期！！！');
+      }
+    }
+  })
+</script>
+</body>
+</html>
